@@ -63,35 +63,82 @@
 </div>
 
 <script>
-    let gridSize = 4;
+let gridSize = 4;
     let goals = [];
-    let completed = [];
+    let completedIndices = [];
+
+    // 1. LOAD EVERYTHING ON STARTUP
+    window.onload = function() {
+        const savedSize = localStorage.getItem('bingo-grid-size');
+        if (savedSize) {
+            gridSize = parseInt(savedSize);
+            // Update the UI buttons to show the correct active size
+            document.querySelectorAll('.size-btn').forEach((btn, i) => {
+                const sizes = [3, 4, 5];
+                btn.classList.toggle('active', sizes[i] === gridSize);
+            });
+        }
+
+        const savedGoals = localStorage.getItem('bingo-goals');
+        const savedProgress = localStorage.getItem('bingo-progress');
+        
+        if (savedGoals) {
+            goals = JSON.parse(savedGoals);
+            if (savedProgress) completedIndices = JSON.parse(savedProgress);
+            showBoard();
+        } else {
+            renderInputs(); // Show setup if no game is active
+        }
+    };
 
     function setSize(s) {
         gridSize = s;
+        localStorage.setItem('bingo-grid-size', s);
         document.querySelectorAll('.size-btn').forEach((btn, i) => {
             btn.classList.toggle('active', [3,4,5][i] === s);
         });
         renderInputs();
     }
 
+    // 2. GENERATE INPUT BOXES & LOAD DRAFTS
     function renderInputs() {
         const container = document.getElementById('goal-inputs');
         container.innerHTML = '';
+        
+        // Check if there's a draft saved so user doesn't lose typing
+        const draftGoals = JSON.parse(localStorage.getItem('bingo-draft-goals')) || [];
+
         for (let i = 0; i < gridSize * gridSize; i++) {
+            const val = draftGoals[i] || "";
             container.innerHTML += `
                 <div class="input-group">
                     <label>${i + 1}</label>
-                    <input type="text" class="goal-in" placeholder="Goal ${i + 1}">
+                    <input type="text" class="goal-in" 
+                           placeholder="Goal ${i + 1}" 
+                           value="${val}" 
+                           oninput="saveDraft()">
                 </div>`;
         }
     }
 
+    // 3. AUTO-SAVE AS YOU TYPE
+    function saveDraft() {
+        const draft = Array.from(document.querySelectorAll('.goal-in')).map(i => i.value);
+        localStorage.setItem('bingo-draft-goals', JSON.stringify(draft));
+    }
+
     function launchGame() {
-        goals = Array.from(document.querySelectorAll('.goal-in')).map(i => i.value || `Goal ${i.placeholder}`);
-        const reward = document.getElementById('reward-input').value || "A high five!";
-        localStorage.setItem('bingo-reward', reward);
+        const inputElements = document.querySelectorAll('.goal-in');
+        goals = Array.from(inputElements).map(i => i.value || i.placeholder);
         
+        const reward = document.getElementById('reward-input').value || "A treat!";
+        localStorage.setItem('bingo-reward', reward);
+        localStorage.setItem('bingo-goals', JSON.stringify(goals));
+        
+        showBoard();
+    }
+
+    function showBoard() {
         document.getElementById('setup-area').classList.add('hidden');
         document.getElementById('game-area').classList.remove('hidden');
         renderGrid();
@@ -105,9 +152,17 @@
         goals.forEach((goal, i) => {
             const cell = document.createElement('div');
             cell.className = 'cell';
+            if (completedIndices.includes(i)) cell.classList.add('completed');
             cell.textContent = goal;
+            
             cell.onclick = () => {
                 cell.classList.toggle('completed');
+                if (cell.classList.contains('completed')) {
+                    completedIndices.push(i);
+                } else {
+                    completedIndices = completedIndices.filter(idx => idx !== i);
+                }
+                localStorage.setItem('bingo-progress', JSON.stringify(completedIndices));
                 checkWin();
             };
             grid.appendChild(cell);
@@ -130,17 +185,32 @@
                 hasBingo = true;
             }
         }
+        
+        // Check Diagonals
+        let diag1 = [], diag2 = [];
+        for (let i = 0; i < gridSize; i++) {
+            diag1.push(i * gridSize + i);
+            diag2.push(i * gridSize + (gridSize - 1 - i));
+        }
+        if (diag1.every(idx => cells[idx].classList.contains('completed')) ||
+            diag2.every(idx => cells[idx].classList.contains('completed'))) {
+            hasBingo = true;
+        }
 
         if (hasBingo) {
             const reward = localStorage.getItem('bingo-reward');
             const banner = document.getElementById('reward-display');
             banner.textContent = `🎊 BINGO! REWARD: ${reward}`;
             banner.style.display = 'block';
-            confetti({ particleCount: 150, spread: 70 });
+            confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
         }
     }
 
-    renderInputs(); // Initial run
+    function editGoals() {
+        document.getElementById('setup-area').classList.remove('hidden');
+        document.getElementById('game-area').classList.add('hidden');
+    }
 </script>
 </body>
 </html>
+
