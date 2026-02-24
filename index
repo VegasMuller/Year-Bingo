@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Year Bingo: No Mercy Edition</title>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <style>
+        :root { --bg: #0f172a; --card: #1e293b; --primary: #38bdf8; --text: #f8fafc; --success: #22c55e; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); padding: 20px; display: flex; flex-direction: column; align-items: center; }
+        .container { max-width: 600px; width: 100%; }
+        
+        /* Setup Styles */
+        .setup-card { background: var(--card); padding: 25px; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
+        .size-buttons { display: flex; gap: 10px; margin: 20px 0; }
+        .size-btn { flex: 1; padding: 10px; border: 1px solid var(--primary); background: transparent; color: var(--primary); cursor: pointer; border-radius: 8px; font-weight: bold; }
+        .size-btn.active { background: var(--primary); color: var(--bg); }
+        
+        .goal-inputs-scroll { max-height: 300px; overflow-y: auto; margin: 20px 0; padding-right: 10px; }
+        .input-group { display: flex; align-items: center; margin-bottom: 8px; gap: 10px; }
+        .input-group label { width: 30px; font-size: 0.8rem; color: #94a3b8; }
+        input[type="text"] { flex: 1; background: #0f172a; border: 1px solid #334155; color: white; padding: 10px; border-radius: 6px; }
+
+        /* Grid Styles */
+        .grid { display: grid; gap: 8px; margin: 20px 0; }
+        .cell { aspect-ratio: 1/1; background: var(--card); border: 1px solid #334155; display: flex; align-items: center; justify-content: center; padding: 5px; cursor: pointer; font-size: 0.7rem; border-radius: 8px; text-align: center; transition: 0.2s; }
+        .cell.completed { background: var(--success); color: white; text-decoration: line-through; border-color: #16a34a; }
+        
+        .reward-banner { background: #3b82f6; color: white; padding: 10px; border-radius: 8px; margin-bottom: 15px; display: none; font-weight: bold; animation: slideIn 0.5s ease; }
+        @keyframes slideIn { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        
+        .hidden { display: none; }
+        button.main-btn { width: 100%; padding: 15px; background: var(--primary); color: var(--bg); border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 1rem; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>🎯 2026 Bingo</h1>
+    <div id="reward-display" class="reward-banner"></div>
+
+    <div id="setup-area" class="setup-card">
+        <h3>1. Select Grid Size</h3>
+        <div class="size-buttons">
+            <button class="size-btn" onclick="setSize(3)">3 x 3</button>
+            <button class="size-btn active" onclick="setSize(4)">4 x 4</button>
+            <button class="size-btn" onclick="setSize(5)">5 x 5</button>
+        </div>
+
+        <h3>2. Enter Your Goals</h3>
+        <div id="goal-inputs" class="goal-inputs-scroll"></div>
+
+        <h3>3. Set a Reward</h3>
+        <input type="text" id="reward-input" placeholder="e.g. A weekend trip / New shoes">
+        
+        <button class="main-btn" style="margin-top:20px" onclick="launchGame()">Generate Board</button>
+    </div>
+
+    <div id="game-area" class="hidden">
+        <div id="bingo-grid" class="grid"></div>
+        <button class="main-btn" style="background: transparent; color: #94a3b8; border: 1px solid #334155;" onclick="location.reload()">Reset/Edit Everything</button>
+    </div>
+</div>
+
+<script>
+    let gridSize = 4;
+    let goals = [];
+    let completed = [];
+
+    function setSize(s) {
+        gridSize = s;
+        document.querySelectorAll('.size-btn').forEach((btn, i) => {
+            btn.classList.toggle('active', [3,4,5][i] === s);
+        });
+        renderInputs();
+    }
+
+    function renderInputs() {
+        const container = document.getElementById('goal-inputs');
+        container.innerHTML = '';
+        for (let i = 0; i < gridSize * gridSize; i++) {
+            container.innerHTML += `
+                <div class="input-group">
+                    <label>${i + 1}</label>
+                    <input type="text" class="goal-in" placeholder="Goal ${i + 1}">
+                </div>`;
+        }
+    }
+
+    function launchGame() {
+        goals = Array.from(document.querySelectorAll('.goal-in')).map(i => i.value || `Goal ${i.placeholder}`);
+        const reward = document.getElementById('reward-input').value || "A high five!";
+        localStorage.setItem('bingo-reward', reward);
+        
+        document.getElementById('setup-area').classList.add('hidden');
+        document.getElementById('game-area').classList.remove('hidden');
+        renderGrid();
+    }
+
+    function renderGrid() {
+        const grid = document.getElementById('bingo-grid');
+        grid.style.gridTemplateColumns = `repeat(${gridSize}, 1fr)`;
+        grid.innerHTML = '';
+        
+        goals.forEach((goal, i) => {
+            const cell = document.createElement('div');
+            cell.className = 'cell';
+            cell.textContent = goal;
+            cell.onclick = () => {
+                cell.classList.toggle('completed');
+                checkWin();
+            };
+            grid.appendChild(cell);
+        });
+    }
+
+    function checkWin() {
+        const cells = document.querySelectorAll('.cell');
+        let hasBingo = false;
+
+        // Check Rows & Columns
+        for (let i = 0; i < gridSize; i++) {
+            let row = [], col = [];
+            for (let j = 0; j < gridSize; j++) {
+                row.push(i * gridSize + j);
+                col.push(j * gridSize + i);
+            }
+            if (row.every(idx => cells[idx].classList.contains('completed')) ||
+                col.every(idx => cells[idx].classList.contains('completed'))) {
+                hasBingo = true;
+            }
+        }
+
+        if (hasBingo) {
+            const reward = localStorage.getItem('bingo-reward');
+            const banner = document.getElementById('reward-display');
+            banner.textContent = `🎊 BINGO! REWARD: ${reward}`;
+            banner.style.display = 'block';
+            confetti({ particleCount: 150, spread: 70 });
+        }
+    }
+
+    renderInputs(); // Initial run
+</script>
+</body>
+</html>
