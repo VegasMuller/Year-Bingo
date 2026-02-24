@@ -3,33 +3,30 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Year Bingo 2026 | Ultimate Edition</title>
+    <title>Year Bingo 2026 | Fixed</title>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <style>
         :root { --bg: #0f172a; --card: #1e293b; --primary: #38bdf8; --text: #f8fafc; --success: #22c55e; --accent: #f59e0b; --border: #334155; }
         body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--text); padding: 20px; display: flex; flex-direction: column; align-items: center; }
         .container { max-width: 600px; width: 100%; }
         
-        .setup-card { background: var(--card); padding: 25px; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
+        .setup-card { background: var(--card); padding: 25px; border-radius: 16px; border: 1px solid var(--border); }
         .size-buttons { display: flex; gap: 10px; margin: 15px 0; }
-        .size-btn { flex: 1; padding: 10px; border: 1px solid var(--primary); background: transparent; color: var(--primary); cursor: pointer; border-radius: 8px; font-weight: bold; transition: 0.2s; }
+        .size-btn { flex: 1; padding: 12px; border: 1px solid var(--primary); background: transparent; color: var(--primary); cursor: pointer; border-radius: 8px; font-weight: bold; }
         .size-btn.active { background: var(--primary); color: var(--bg); }
         
         .scroll-area { max-height: 250px; overflow-y: auto; margin: 15px 0; padding: 10px; border: 1px solid var(--border); border-radius: 8px; background: #0f172a; }
         .input-group { display: flex; align-items: center; margin-bottom: 8px; gap: 10px; }
-        .input-group label { width: 80px; font-size: 0.75rem; color: #94a3b8; }
-        input[type="text"] { flex: 1; background: #1e293b; border: 1px solid var(--border); color: white; padding: 8px; border-radius: 6px; font-size: 0.9rem; }
+        .input-group label { width: 70px; font-size: 0.7rem; color: #94a3b8; text-transform: uppercase; }
+        input[type="text"] { flex: 1; background: #1e293b; border: 1px solid var(--border); color: white; padding: 10px; border-radius: 6px; }
 
         .grid { display: grid; gap: 8px; margin: 20px 0; }
-        .cell { aspect-ratio: 1/1; background: var(--card); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; padding: 5px; cursor: pointer; font-size: 0.75rem; border-radius: 8px; text-align: center; transition: 0.2s; font-weight: 500; }
-        .cell.completed { background: var(--success); color: white; text-decoration: line-through; border-color: #16a34a; box-shadow: 0 0 15px rgba(34, 197, 94, 0.2); }
+        .cell { aspect-ratio: 1/1; background: var(--card); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; padding: 5px; cursor: pointer; font-size: 0.75rem; border-radius: 8px; text-align: center; }
+        .cell.completed { background: var(--success); color: white; text-decoration: line-through; }
         
-        .reward-popup { background: var(--accent); color: #000; padding: 15px; border-radius: 12px; margin-bottom: 15px; display: none; font-weight: bold; text-align: center; box-shadow: 0 4px 20px rgba(245, 158, 11, 0.5); border: 2px solid white; }
-        
+        .reward-popup { background: var(--accent); color: #000; padding: 15px; border-radius: 12px; margin-bottom: 15px; display: none; font-weight: bold; text-align: center; }
         .hidden { display: none; }
-        button.main-btn { width: 100%; padding: 15px; background: var(--primary); color: var(--bg); border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 1rem; transition: 0.2s; }
-        button.main-btn:hover { opacity: 0.9; transform: translateY(-1px); }
-        h3 { border-bottom: 1px solid var(--border); padding-bottom: 5px; margin-top: 20px; color: var(--primary); font-size: 1.1rem; }
+        button.main-btn { width: 100%; padding: 15px; background: var(--primary); color: var(--bg); border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -41,104 +38,107 @@
     <div id="setup-area" class="setup-card">
         <h3>1. Grid Size</h3>
         <div class="size-buttons">
-            <button class="size-btn" onclick="updateSize(3)">3x3</button>
-            <button class="size-btn" onclick="updateSize(4)">4x4</button>
-            <button class="size-btn" onclick="updateSize(5)">5x5</button>
+            <button class="size-btn" id="btn-3" onclick="changeSize(3)">3x3</button>
+            <button class="size-btn" id="btn-4" onclick="changeSize(4)">4x4</button>
+            <button class="size-btn" id="btn-5" onclick="changeSize(5)">5x5</button>
         </div>
 
-        <h3>2. Goals (Drafts Auto-Saved)</h3>
+        <h3>2. Your Goals</h3>
         <div id="goal-inputs" class="scroll-area"></div>
 
         <h3>3. Line Rewards</h3>
         <div id="reward-inputs" class="scroll-area"></div>
         
-        <button class="main-btn" onclick="launchGame()">Save & Launch Board</button>
+        <button class="main-btn" onclick="launchGame()">Launch My Board</button>
     </div>
 
     <div id="game-area" class="hidden">
         <div id="bingo-grid" class="grid"></div>
-        <div style="display: flex; gap: 10px; margin-top: 20px;">
-            <button class="main-btn" style="background: transparent; color: #94a3b8; border: 1px solid var(--border);" onclick="editBoard()">Edit Board</button>
-            <button class="main-btn" style="background: transparent; color: #ef4444; border: 1px solid #ef4444;" onclick="resetProgress()">Reset Marks</button>
-        </div>
+        <button class="main-btn" style="background: transparent; color: #94a3b8; border: 1px solid var(--border); margin-top: 20px;" onclick="resetEverything()">Start New/Edit</button>
     </div>
 </div>
 
 <script>
-    let gridSize = parseInt(localStorage.getItem('bingo-size')) || 4;
+    let currentSize = 4;
     let goals = [];
     let rewards = {};
-    let completedIndices = [];
-    let completedLines = [];
+    let wonLines = [];
 
+    // --- STARTUP LOGIC ---
     window.onload = function() {
+        // If a game is already active, show it
         if (localStorage.getItem('bingo-active') === 'true') {
-            loadActiveGame();
+            loadGame();
         } else {
-            updateSize(gridSize);
+            // Otherwise, start the setup with the last used size (default 4)
+            const savedSize = localStorage.getItem('bingo-size');
+            changeSize(savedSize ? parseInt(savedSize) : 4);
         }
     };
 
-    function updateSize(s) {
-        gridSize = s;
+    function changeSize(s) {
+        currentSize = s;
         localStorage.setItem('bingo-size', s);
-        document.querySelectorAll('.size-btn').forEach((btn, i) => {
-            btn.classList.toggle('active', [3,4,5][i] === s);
-        });
-        renderSetup();
+        
+        // Update Buttons
+        document.querySelectorAll('.size-btn').forEach(btn => btn.classList.remove('active'));
+        document.getElementById(`btn-${s}`).classList.add('active');
+        
+        renderSetupFields();
     }
 
-    function renderSetup() {
+    function renderSetupFields() {
         const goalCont = document.getElementById('goal-inputs');
         const rewardCont = document.getElementById('reward-inputs');
         
-        // Load Drafts
-        const draftGoals = JSON.parse(localStorage.getItem('draft-goals')) || {};
-        const draftRewards = JSON.parse(localStorage.getItem('draft-rewards')) || {};
+        // Load any saved drafts
+        const drafts = JSON.parse(localStorage.getItem('bingo-drafts')) || {};
 
-        // Goals
+        // Generate Goal Inputs
         goalCont.innerHTML = '';
-        for (let i = 0; i < gridSize * gridSize; i++) {
-            const val = draftGoals[`g-${gridSize}-${i}`] || "";
+        for (let i = 0; i < currentSize * currentSize; i++) {
+            const key = `g-${currentSize}-${i}`;
             goalCont.innerHTML += `
                 <div class="input-group">
                     <label>#${i+1}</label>
-                    <input type="text" class="goal-in" data-idx="${i}" value="${val}" oninput="saveDrafts()" placeholder="My Goal...">
+                    <input type="text" class="g-in" data-key="${key}" value="${drafts[key] || ''}" oninput="syncDrafts()" placeholder="Goal ${i+1}">
                 </div>`;
         }
 
-        // Rewards
+        // Generate Reward Inputs
         rewardCont.innerHTML = '';
-        const types = [{t:'row', l:'Row'}, {t:'col', l:'Col'}];
-        types.forEach(type => {
-            for (let i = 0; i < gridSize; i++) {
-                const id = `${type.t}-${i}`;
-                const val = draftRewards[`${gridSize}-${id}`] || "";
-                rewardCont.innerHTML += `<div class="input-group"><label>${type.l} ${i+1}</label><input type="text" class="reward-in" data-id="${id}" value="${val}" oninput="saveDrafts()" placeholder="Reward..."></div>`;
-            }
-        });
-        const d1Val = draftRewards[`${gridSize}-diag-0`] || "";
-        const d2Val = draftRewards[`${gridSize}-diag-1`] || "";
-        rewardCont.innerHTML += `<div class="input-group"><label>Diag 1</label><input type="text" class="reward-in" data-id="diag-0" value="${d1Val}" oninput="saveDrafts()"></div>`;
-        rewardCont.innerHTML += `<div class="input-group"><label>Diag 2</label><input type="text" class="reward-in" data-id="diag-1" value="${d2Val}" oninput="saveDrafts()"></div>`;
+        // Rows & Cols
+        for (let i = 0; i < currentSize; i++) {
+            const rKey = `r-${currentSize}-row-${i}`;
+            const cKey = `r-${currentSize}-col-${i}`;
+            rewardCont.innerHTML += `<div class="input-group"><label>Row ${i+1}</label><input type="text" class="r-in" data-key="${rKey}" value="${drafts[rKey] || ''}" oninput="syncDrafts()"></div>`;
+            rewardCont.innerHTML += `<div class="input-group"><label>Col ${i+1}</label><input type="text" class="r-in" data-key="${cKey}" value="${drafts[cKey] || ''}" oninput="syncDrafts()"></div>`;
+        }
+        // Diagonals
+        const d1Key = `r-${currentSize}-d1`;
+        const d2Key = `r-${currentSize}-d2`;
+        rewardCont.innerHTML += `<div class="input-group"><label>Diag 1</label><input type="text" class="r-in" data-key="${d1Key}" value="${drafts[d1Key] || ''}" oninput="syncDrafts()"></div>`;
+        rewardCont.innerHTML += `<div class="input-group"><label>Diag 2</label><input type="text" class="r-in" data-key="${d2Key}" value="${drafts[d2Key] || ''}" oninput="syncDrafts()"></div>`;
     }
 
-    function saveDrafts() {
-        const dGoals = JSON.parse(localStorage.getItem('draft-goals')) || {};
-        const dRewards = JSON.parse(localStorage.getItem('draft-rewards')) || {};
-        
-        document.querySelectorAll('.goal-in').forEach(i => dGoals[`g-${gridSize}-${i.dataset.idx}`] = i.value);
-        document.querySelectorAll('.reward-in').forEach(i => dRewards[`${gridSize}-${i.dataset.id}`] = i.value);
-        
-        localStorage.setItem('draft-goals', JSON.stringify(dGoals));
-        localStorage.setItem('draft-rewards', JSON.stringify(dRewards));
+    function syncDrafts() {
+        const drafts = JSON.parse(localStorage.getItem('bingo-drafts')) || {};
+        document.querySelectorAll('.g-in, .r-in').forEach(el => {
+            drafts[el.dataset.key] = el.value;
+        });
+        localStorage.setItem('bingo-drafts', JSON.stringify(drafts));
     }
 
     function launchGame() {
-        goals = Array.from(document.querySelectorAll('.goal-in')).map(i => i.value || "Goal");
+        // Collect current inputs
+        goals = Array.from(document.querySelectorAll('.g-in')).map(el => el.value || el.placeholder);
         rewards = {};
-        document.querySelectorAll('.reward-in').forEach(i => rewards[i.dataset.id] = i.value || "A treat!");
-        
+        document.querySelectorAll('.r-in').forEach(el => {
+            // Strip the size prefix for the active game logic
+            const shortKey = el.dataset.key.replace(`r-${currentSize}-`, '');
+            rewards[shortKey] = el.value || "A prize!";
+        });
+
         localStorage.setItem('active-goals', JSON.stringify(goals));
         localStorage.setItem('active-rewards', JSON.stringify(rewards));
         localStorage.setItem('bingo-active', 'true');
@@ -146,83 +146,71 @@
         showBoard();
     }
 
-    function loadActiveGame() {
+    function loadGame() {
         goals = JSON.parse(localStorage.getItem('active-goals'));
         rewards = JSON.parse(localStorage.getItem('active-rewards'));
-        completedIndices = JSON.parse(localStorage.getItem('active-progress')) || [];
-        completedLines = JSON.parse(localStorage.getItem('active-lines')) || [];
+        currentSize = parseInt(localStorage.getItem('bingo-size'));
         showBoard();
     }
 
     function showBoard() {
         document.getElementById('setup-area').classList.add('hidden');
         document.getElementById('game-area').classList.remove('hidden');
-        renderGrid();
-    }
-
-    function renderGrid() {
-        const grid = document.getElementById('bingo-grid');
-        grid.style.gridTemplateColumns = `repeat(${gridSize}, 1fr)`;
-        grid.innerHTML = '';
         
+        const grid = document.getElementById('bingo-grid');
+        grid.style.gridTemplateColumns = `repeat(${currentSize}, 1fr)`;
+        grid.innerHTML = '';
+
+        const progress = JSON.parse(localStorage.getItem('bingo-progress')) || [];
+        wonLines = JSON.parse(localStorage.getItem('bingo-won-lines')) || [];
+
         goals.forEach((goal, i) => {
             const cell = document.createElement('div');
-            cell.className = 'cell' + (completedIndices.includes(i) ? ' completed' : '');
+            cell.className = 'cell' + (progress.includes(i) ? ' completed' : '');
             cell.textContent = goal;
             cell.onclick = () => {
                 cell.classList.toggle('completed');
-                if (cell.classList.contains('completed')) { completedIndices.push(i); } 
-                else { completedIndices = completedIndices.filter(idx => idx !== i); }
-                localStorage.setItem('active-progress', JSON.stringify(completedIndices));
-                checkBingoLines();
+                const newProgress = Array.from(document.querySelectorAll('.cell'))
+                    .map((c, idx) => c.classList.contains('completed') ? idx : null)
+                    .filter(val => val !== null);
+                localStorage.setItem('bingo-progress', JSON.stringify(newProgress));
+                checkWin(newProgress);
             };
             grid.appendChild(cell);
         });
     }
 
-    function checkBingoLines() {
+    function checkWin(progress) {
         const patterns = [];
-        for (let i = 0; i < gridSize; i++) {
+        for (let i = 0; i < currentSize; i++) {
             let r = [], c = [];
-            for (let j = 0; j < gridSize; j++) { r.push(i * gridSize + j); c.push(j * gridSize + i); }
+            for (let j = 0; j < currentSize; j++) { r.push(i * currentSize + j); c.push(j * currentSize + i); }
             patterns.push({ id: `row-${i}`, idx: r, label: `Row ${i+1}` }, { id: `col-${i}`, idx: c, label: `Col ${i+1}` });
         }
         let d1 = [], d2 = [];
-        for (let i = 0; i < gridSize; i++) { d1.push(i * gridSize + i); d2.push(i * gridSize + (gridSize - 1 - i)); }
-        patterns.push({ id: `diag-0`, idx: d1, label: `Diagonal 1` }, { id: `diag-1`, idx: d2, label: `Diagonal 2` });
+        for (let i = 0; i < currentSize; i++) { d1.push(i * currentSize + i); d2.push(i * currentSize + (currentSize - 1 - i)); }
+        patterns.push({ id: `d1`, idx: d1, label: `Diagonal 1` }, { id: `d2`, idx: d2, label: `Diagonal 2` });
 
         patterns.forEach(p => {
-            const isWin = p.idx.every(index => completedIndices.includes(index));
-            if (isWin && !completedLines.includes(p.id)) {
-                completedLines.push(p.id);
-                localStorage.setItem('active-lines', JSON.stringify(completedLines));
-                fireReward(p.id, p.label);
+            if (p.idx.every(index => progress.includes(index)) && !wonLines.includes(p.id)) {
+                wonLines.push(p.id);
+                localStorage.setItem('bingo-won-lines', JSON.stringify(wonLines));
+                
+                const display = document.getElementById('reward-display');
+                display.innerHTML = `🎉 BINGO! (${p.label})<br>REWARD: ${rewards[p.id]}`;
+                display.style.display = 'block';
+                confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
+                setTimeout(() => { display.style.display = 'none'; }, 5000);
             }
         });
     }
 
-    function fireReward(id, label) {
-        const display = document.getElementById('reward-display');
-        display.innerHTML = `🎉 BINGO! (${label})<br>REWARD: ${rewards[id]}`;
-        display.style.display = 'block';
-        confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
-        setTimeout(() => { display.style.display = 'none'; }, 6000);
-    }
-
-    function editBoard() {
-        if(confirm("Return to setup? Your checkmarks will be saved.")) {
+    function resetEverything() {
+        if(confirm("This will clear your current board and progress. Continue?")) {
             localStorage.setItem('bingo-active', 'false');
+            localStorage.removeItem('bingo-progress');
+            localStorage.removeItem('bingo-won-lines');
             location.reload();
-        }
-    }
-
-    function resetProgress() {
-        if(confirm("Clear all checkmarks and reward history?")) {
-            completedIndices = [];
-            completedLines = [];
-            localStorage.removeItem('active-progress');
-            localStorage.removeItem('active-lines');
-            renderGrid();
         }
     }
 </script>
