@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Year Bingo 2026 | Fixed</title>
+    <title>Year Bingo 2026 | Custom Edition</title>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <style>
         :root { --bg: #0f172a; --card: #1e293b; --primary: #38bdf8; --text: #f8fafc; --success: #22c55e; --accent: #f59e0b; --border: #334155; }
@@ -27,26 +27,34 @@
         .reward-popup { background: var(--accent); color: #000; padding: 15px; border-radius: 12px; margin-bottom: 15px; display: none; font-weight: bold; text-align: center; }
         .hidden { display: none; }
         button.main-btn { width: 100%; padding: 15px; background: var(--primary); color: var(--bg); border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
+        
+        .title-input-section { margin-bottom: 20px; text-align: left; }
+        .title-input-section label { display: block; margin-bottom: 5px; color: var(--primary); font-weight: bold; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>🗓️ Goal Bingo 2026</h1>
+    <h1 id="main-title">🗓️ Goal Bingo 2026</h1>
     <div id="reward-display" class="reward-popup"></div>
 
     <div id="setup-area" class="setup-card">
-        <h3>1. Grid Size</h3>
+        <div class="title-input-section">
+            <label>Bingo Name:</label>
+            <input type="text" id="title-editor" placeholder="e.g. My Summer Goals" oninput="syncTitle()">
+        </div>
+
+        <h3>1. Bingo stærð</h3>
         <div class="size-buttons">
             <button class="size-btn" id="btn-3" onclick="changeSize(3)">3x3</button>
             <button class="size-btn" id="btn-4" onclick="changeSize(4)">4x4</button>
             <button class="size-btn" id="btn-5" onclick="changeSize(5)">5x5</button>
         </div>
 
-        <h3>2. Your Goals</h3>
+        <h3>2. Markmið</h3>
         <div id="goal-inputs" class="scroll-area"></div>
 
-        <h3>3. Line Rewards</h3>
+        <h3>3. Verðlaun</h3>
         <div id="reward-inputs" class="scroll-area"></div>
         
         <button class="main-btn" onclick="launchGame()">Launch My Board</button>
@@ -64,85 +72,74 @@
     let rewards = {};
     let wonLines = [];
 
-    // --- STARTUP LOGIC ---
     window.onload = function() {
-        // If a game is already active, show it
+        const savedTitle = localStorage.getItem('bingo-title');
+        if (savedTitle) {
+            document.getElementById('main-title').textContent = savedTitle;
+            document.getElementById('title-editor').value = savedTitle;
+        }
+
         if (localStorage.getItem('bingo-active') === 'true') {
             loadGame();
         } else {
-            // Otherwise, start the setup with the last used size (default 4)
             const savedSize = localStorage.getItem('bingo-size');
             changeSize(savedSize ? parseInt(savedSize) : 4);
         }
     };
 
+    function syncTitle() {
+        const newTitle = document.getElementById('title-editor').value || "🗓️ Goal Bingo 2026";
+        document.getElementById('main-title').textContent = newTitle;
+        localStorage.setItem('bingo-title', newTitle);
+    }
+
     function changeSize(s) {
         currentSize = s;
         localStorage.setItem('bingo-size', s);
-        
-        // Update Buttons
         document.querySelectorAll('.size-btn').forEach(btn => btn.classList.remove('active'));
         document.getElementById(`btn-${s}`).classList.add('active');
-        
         renderSetupFields();
     }
 
     function renderSetupFields() {
         const goalCont = document.getElementById('goal-inputs');
         const rewardCont = document.getElementById('reward-inputs');
-        
-        // Load any saved drafts
         const drafts = JSON.parse(localStorage.getItem('bingo-drafts')) || {};
 
-        // Generate Goal Inputs
         goalCont.innerHTML = '';
         for (let i = 0; i < currentSize * currentSize; i++) {
             const key = `g-${currentSize}-${i}`;
-            goalCont.innerHTML += `
-                <div class="input-group">
-                    <label>#${i+1}</label>
-                    <input type="text" class="g-in" data-key="${key}" value="${drafts[key] || ''}" oninput="syncDrafts()" placeholder="Goal ${i+1}">
-                </div>`;
+            goalCont.innerHTML += `<div class="input-group"><label>#${i+1}</label><input type="text" class="g-in" data-key="${key}" value="${drafts[key] || ''}" oninput="syncDrafts()" placeholder="Goal ${i+1}"></div>`;
         }
 
-        // Generate Reward Inputs
         rewardCont.innerHTML = '';
-        // Rows & Cols
         for (let i = 0; i < currentSize; i++) {
             const rKey = `r-${currentSize}-row-${i}`;
             const cKey = `r-${currentSize}-col-${i}`;
             rewardCont.innerHTML += `<div class="input-group"><label>Row ${i+1}</label><input type="text" class="r-in" data-key="${rKey}" value="${drafts[rKey] || ''}" oninput="syncDrafts()"></div>`;
             rewardCont.innerHTML += `<div class="input-group"><label>Col ${i+1}</label><input type="text" class="r-in" data-key="${cKey}" value="${drafts[cKey] || ''}" oninput="syncDrafts()"></div>`;
         }
-        // Diagonals
-        const d1Key = `r-${currentSize}-d1`;
-        const d2Key = `r-${currentSize}-d2`;
+        const d1Key = `r-${currentSize}-d1`, d2Key = `r-${currentSize}-d2`;
         rewardCont.innerHTML += `<div class="input-group"><label>Diag 1</label><input type="text" class="r-in" data-key="${d1Key}" value="${drafts[d1Key] || ''}" oninput="syncDrafts()"></div>`;
         rewardCont.innerHTML += `<div class="input-group"><label>Diag 2</label><input type="text" class="r-in" data-key="${d2Key}" value="${drafts[d2Key] || ''}" oninput="syncDrafts()"></div>`;
     }
 
     function syncDrafts() {
         const drafts = JSON.parse(localStorage.getItem('bingo-drafts')) || {};
-        document.querySelectorAll('.g-in, .r-in').forEach(el => {
-            drafts[el.dataset.key] = el.value;
-        });
+        document.querySelectorAll('.g-in, .r-in').forEach(el => drafts[el.dataset.key] = el.value);
         localStorage.setItem('bingo-drafts', JSON.stringify(drafts));
     }
 
     function launchGame() {
-        // Collect current inputs
         goals = Array.from(document.querySelectorAll('.g-in')).map(el => el.value || el.placeholder);
         rewards = {};
         document.querySelectorAll('.r-in').forEach(el => {
-            // Strip the size prefix for the active game logic
             const shortKey = el.dataset.key.replace(`r-${currentSize}-`, '');
             rewards[shortKey] = el.value || "A prize!";
         });
-
         localStorage.setItem('active-goals', JSON.stringify(goals));
         localStorage.setItem('active-rewards', JSON.stringify(rewards));
         localStorage.setItem('bingo-active', 'true');
-        
         showBoard();
     }
 
@@ -156,11 +153,9 @@
     function showBoard() {
         document.getElementById('setup-area').classList.add('hidden');
         document.getElementById('game-area').classList.remove('hidden');
-        
         const grid = document.getElementById('bingo-grid');
         grid.style.gridTemplateColumns = `repeat(${currentSize}, 1fr)`;
         grid.innerHTML = '';
-
         const progress = JSON.parse(localStorage.getItem('bingo-progress')) || [];
         wonLines = JSON.parse(localStorage.getItem('bingo-won-lines')) || [];
 
@@ -170,11 +165,9 @@
             cell.textContent = goal;
             cell.onclick = () => {
                 cell.classList.toggle('completed');
-                const newProgress = Array.from(document.querySelectorAll('.cell'))
-                    .map((c, idx) => c.classList.contains('completed') ? idx : null)
-                    .filter(val => val !== null);
-                localStorage.setItem('bingo-progress', JSON.stringify(newProgress));
-                checkWin(newProgress);
+                const newProg = Array.from(document.querySelectorAll('.cell')).map((c, idx) => c.classList.contains('completed') ? idx : null).filter(v => v !== null);
+                localStorage.setItem('bingo-progress', JSON.stringify(newProg));
+                checkWin(newProg);
             };
             grid.appendChild(cell);
         });
@@ -195,7 +188,6 @@
             if (p.idx.every(index => progress.includes(index)) && !wonLines.includes(p.id)) {
                 wonLines.push(p.id);
                 localStorage.setItem('bingo-won-lines', JSON.stringify(wonLines));
-                
                 const display = document.getElementById('reward-display');
                 display.innerHTML = `🎉 BINGO! (${p.label})<br>REWARD: ${rewards[p.id]}`;
                 display.style.display = 'block';
@@ -206,7 +198,7 @@
     }
 
     function resetEverything() {
-        if(confirm("This will clear your current board and progress. Continue?")) {
+        if(confirm("This will clear your current board progress. Your draft goals/rewards will stay. Continue?")) {
             localStorage.setItem('bingo-active', 'false');
             localStorage.removeItem('bingo-progress');
             localStorage.removeItem('bingo-won-lines');
