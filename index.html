@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Year Bingo 2026 | Custom Edition</title>
+    <title>Year Bingo 2026 | Audio Edition</title>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <style>
         :root { --bg: #0f172a; --card: #1e293b; --primary: #38bdf8; --text: #f8fafc; --success: #22c55e; --accent: #f59e0b; --border: #334155; }
@@ -24,10 +24,9 @@
         .cell { aspect-ratio: 1/1; background: var(--card); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; padding: 5px; cursor: pointer; font-size: 0.75rem; border-radius: 8px; text-align: center; }
         .cell.completed { background: var(--success); color: white; text-decoration: line-through; }
         
-        .reward-popup { background: var(--accent); color: #000; padding: 15px; border-radius: 12px; margin-bottom: 15px; display: none; font-weight: bold; text-align: center; }
+        .reward-popup { background: var(--accent); color: #000; padding: 15px; border-radius: 12px; margin-bottom: 15px; display: none; font-weight: bold; text-align: center; border: 2px solid white; }
         .hidden { display: none; }
         button.main-btn { width: 100%; padding: 15px; background: var(--primary); color: var(--bg); border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
-        
         .title-input-section { margin-bottom: 20px; text-align: left; }
         .title-input-section label { display: block; margin-bottom: 5px; color: var(--primary); font-weight: bold; }
     </style>
@@ -44,17 +43,17 @@
             <input type="text" id="title-editor" placeholder="e.g. My Summer Goals" oninput="syncTitle()">
         </div>
 
-        <h3>1. Bingo stærð</h3>
+        <h3>1. Grid Size</h3>
         <div class="size-buttons">
             <button class="size-btn" id="btn-3" onclick="changeSize(3)">3x3</button>
             <button class="size-btn" id="btn-4" onclick="changeSize(4)">4x4</button>
             <button class="size-btn" id="btn-5" onclick="changeSize(5)">5x5</button>
         </div>
 
-        <h3>2. Markmið</h3>
+        <h3>2. Your Goals</h3>
         <div id="goal-inputs" class="scroll-area"></div>
 
-        <h3>3. Verðlaun</h3>
+        <h3>3. Line Rewards</h3>
         <div id="reward-inputs" class="scroll-area"></div>
         
         <button class="main-btn" onclick="launchGame()">Launch My Board</button>
@@ -71,6 +70,28 @@
     let goals = [];
     let rewards = {};
     let wonLines = [];
+
+    // --- SOUND ENGINE ---
+    function playWinSound() {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        
+        function playTone(freq, startTime, duration) {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(freq, startTime);
+            gain.gain.setValueAtTime(0.1, startTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, startTime + duration);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start(startTime);
+            osc.stop(startTime + duration);
+        }
+
+        // A bright "Ding-Ding!" chime
+        playTone(523.25, audioCtx.currentTime, 0.5); // C5
+        playTone(659.25, audioCtx.currentTime + 0.15, 0.5); // E5
+    }
 
     window.onload = function() {
         const savedTitle = localStorage.getItem('bingo-title');
@@ -114,8 +135,7 @@
 
         rewardCont.innerHTML = '';
         for (let i = 0; i < currentSize; i++) {
-            const rKey = `r-${currentSize}-row-${i}`;
-            const cKey = `r-${currentSize}-col-${i}`;
+            const rKey = `r-${currentSize}-row-${i}`, cKey = `r-${currentSize}-col-${i}`;
             rewardCont.innerHTML += `<div class="input-group"><label>Row ${i+1}</label><input type="text" class="r-in" data-key="${rKey}" value="${drafts[rKey] || ''}" oninput="syncDrafts()"></div>`;
             rewardCont.innerHTML += `<div class="input-group"><label>Col ${i+1}</label><input type="text" class="r-in" data-key="${cKey}" value="${drafts[cKey] || ''}" oninput="syncDrafts()"></div>`;
         }
@@ -188,17 +208,22 @@
             if (p.idx.every(index => progress.includes(index)) && !wonLines.includes(p.id)) {
                 wonLines.push(p.id);
                 localStorage.setItem('bingo-won-lines', JSON.stringify(wonLines));
+                
+                // TRIGGER REWARDS & SOUND
                 const display = document.getElementById('reward-display');
                 display.innerHTML = `🎉 BINGO! (${p.label})<br>REWARD: ${rewards[p.id]}`;
                 display.style.display = 'block';
+                
+                playWinSound();
                 confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
+                
                 setTimeout(() => { display.style.display = 'none'; }, 5000);
             }
         });
     }
 
     function resetEverything() {
-        if(confirm("This will clear your current board progress. Your draft goals/rewards will stay. Continue?")) {
+        if(confirm("This will clear board progress. Drafts will stay. Continue?")) {
             localStorage.setItem('bingo-active', 'false');
             localStorage.removeItem('bingo-progress');
             localStorage.removeItem('bingo-won-lines');
@@ -208,3 +233,4 @@
 </script>
 </body>
 </html>
+
