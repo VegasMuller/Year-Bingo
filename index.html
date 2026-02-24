@@ -39,29 +39,29 @@
 
     <div id="setup-area" class="setup-card">
         <div class="title-input-section">
-            <label>Bingo Name:</label>
-            <input type="text" id="title-editor" placeholder="e.g. My Summer Goals" oninput="syncTitle()">
+            <label>Bingo Nafn:</label>
+            <input type="text" id="title-editor" placeholder="year of the horse lockin bby" oninput="syncTitle()">
         </div>
 
-        <h3>1. Grid Size</h3>
+        <h3>1. Bingo Stærð</h3>
         <div class="size-buttons">
             <button class="size-btn" id="btn-3" onclick="changeSize(3)">3x3</button>
             <button class="size-btn" id="btn-4" onclick="changeSize(4)">4x4</button>
             <button class="size-btn" id="btn-5" onclick="changeSize(5)">5x5</button>
         </div>
 
-        <h3>2. Your Goals</h3>
+        <h3>2. Markmið</h3>
         <div id="goal-inputs" class="scroll-area"></div>
 
-        <h3>3. Line Rewards</h3>
+        <h3>3. Verðlaun</h3>
         <div id="reward-inputs" class="scroll-area"></div>
         
-        <button class="main-btn" onclick="launchGame()">Launch My Board</button>
+        <button class="main-btn" onclick="launchGame()">Byrja Bingo BBY</button>
     </div>
 
     <div id="game-area" class="hidden">
         <div id="bingo-grid" class="grid"></div>
-        <button class="main-btn" style="background: transparent; color: #94a3b8; border: 1px solid var(--border); margin-top: 20px;" onclick="resetEverything()">Start New/Edit</button>
+        <button class="main-btn" style="background: transparent; color: #94a3b8; border: 1px solid var(--border); margin-top: 20px;" onclick="resetEverything()">Byrja nýtt/edita</button>
     </div>
 </div>
 
@@ -233,4 +233,5 @@
 </script>
 </body>
 </html>
+
 
