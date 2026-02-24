@@ -109,4 +109,122 @@
 
         // Rewards
         rewardCont.innerHTML = '';
-        const
+        const types = [{t:'row', l:'Row'}, {t:'col', l:'Col'}];
+        types.forEach(type => {
+            for (let i = 0; i < gridSize; i++) {
+                const id = `${type.t}-${i}`;
+                const val = draftRewards[`${gridSize}-${id}`] || "";
+                rewardCont.innerHTML += `<div class="input-group"><label>${type.l} ${i+1}</label><input type="text" class="reward-in" data-id="${id}" value="${val}" oninput="saveDrafts()" placeholder="Reward..."></div>`;
+            }
+        });
+        const d1Val = draftRewards[`${gridSize}-diag-0`] || "";
+        const d2Val = draftRewards[`${gridSize}-diag-1`] || "";
+        rewardCont.innerHTML += `<div class="input-group"><label>Diag 1</label><input type="text" class="reward-in" data-id="diag-0" value="${d1Val}" oninput="saveDrafts()"></div>`;
+        rewardCont.innerHTML += `<div class="input-group"><label>Diag 2</label><input type="text" class="reward-in" data-id="diag-1" value="${d2Val}" oninput="saveDrafts()"></div>`;
+    }
+
+    function saveDrafts() {
+        const dGoals = JSON.parse(localStorage.getItem('draft-goals')) || {};
+        const dRewards = JSON.parse(localStorage.getItem('draft-rewards')) || {};
+        
+        document.querySelectorAll('.goal-in').forEach(i => dGoals[`g-${gridSize}-${i.dataset.idx}`] = i.value);
+        document.querySelectorAll('.reward-in').forEach(i => dRewards[`${gridSize}-${i.dataset.id}`] = i.value);
+        
+        localStorage.setItem('draft-goals', JSON.stringify(dGoals));
+        localStorage.setItem('draft-rewards', JSON.stringify(dRewards));
+    }
+
+    function launchGame() {
+        goals = Array.from(document.querySelectorAll('.goal-in')).map(i => i.value || "Goal");
+        rewards = {};
+        document.querySelectorAll('.reward-in').forEach(i => rewards[i.dataset.id] = i.value || "A treat!");
+        
+        localStorage.setItem('active-goals', JSON.stringify(goals));
+        localStorage.setItem('active-rewards', JSON.stringify(rewards));
+        localStorage.setItem('bingo-active', 'true');
+        
+        showBoard();
+    }
+
+    function loadActiveGame() {
+        goals = JSON.parse(localStorage.getItem('active-goals'));
+        rewards = JSON.parse(localStorage.getItem('active-rewards'));
+        completedIndices = JSON.parse(localStorage.getItem('active-progress')) || [];
+        completedLines = JSON.parse(localStorage.getItem('active-lines')) || [];
+        showBoard();
+    }
+
+    function showBoard() {
+        document.getElementById('setup-area').classList.add('hidden');
+        document.getElementById('game-area').classList.remove('hidden');
+        renderGrid();
+    }
+
+    function renderGrid() {
+        const grid = document.getElementById('bingo-grid');
+        grid.style.gridTemplateColumns = `repeat(${gridSize}, 1fr)`;
+        grid.innerHTML = '';
+        
+        goals.forEach((goal, i) => {
+            const cell = document.createElement('div');
+            cell.className = 'cell' + (completedIndices.includes(i) ? ' completed' : '');
+            cell.textContent = goal;
+            cell.onclick = () => {
+                cell.classList.toggle('completed');
+                if (cell.classList.contains('completed')) { completedIndices.push(i); } 
+                else { completedIndices = completedIndices.filter(idx => idx !== i); }
+                localStorage.setItem('active-progress', JSON.stringify(completedIndices));
+                checkBingoLines();
+            };
+            grid.appendChild(cell);
+        });
+    }
+
+    function checkBingoLines() {
+        const patterns = [];
+        for (let i = 0; i < gridSize; i++) {
+            let r = [], c = [];
+            for (let j = 0; j < gridSize; j++) { r.push(i * gridSize + j); c.push(j * gridSize + i); }
+            patterns.push({ id: `row-${i}`, idx: r, label: `Row ${i+1}` }, { id: `col-${i}`, idx: c, label: `Col ${i+1}` });
+        }
+        let d1 = [], d2 = [];
+        for (let i = 0; i < gridSize; i++) { d1.push(i * gridSize + i); d2.push(i * gridSize + (gridSize - 1 - i)); }
+        patterns.push({ id: `diag-0`, idx: d1, label: `Diagonal 1` }, { id: `diag-1`, idx: d2, label: `Diagonal 2` });
+
+        patterns.forEach(p => {
+            const isWin = p.idx.every(index => completedIndices.includes(index));
+            if (isWin && !completedLines.includes(p.id)) {
+                completedLines.push(p.id);
+                localStorage.setItem('active-lines', JSON.stringify(completedLines));
+                fireReward(p.id, p.label);
+            }
+        });
+    }
+
+    function fireReward(id, label) {
+        const display = document.getElementById('reward-display');
+        display.innerHTML = `🎉 BINGO! (${label})<br>REWARD: ${rewards[id]}`;
+        display.style.display = 'block';
+        confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
+        setTimeout(() => { display.style.display = 'none'; }, 6000);
+    }
+
+    function editBoard() {
+        if(confirm("Return to setup? Your checkmarks will be saved.")) {
+            localStorage.setItem('bingo-active', 'false');
+            location.reload();
+        }
+    }
+
+    function resetProgress() {
+        if(confirm("Clear all checkmarks and reward history?")) {
+            completedIndices = [];
+            completedLines = [];
+            localStorage.removeItem('active-progress');
+            localStorage.removeItem('active-lines');
+            renderGrid();
+        }
+    }
+</script>
+</body>
+</html>
